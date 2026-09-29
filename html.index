@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Casa</title>
+<style>
+:root {
+  --bg: #0f0e0d;
+  --surface: #1a1816;
+  --elevated: #24211e;
+  --text: #f5f0e8;
+  --muted: #a89f91;
+  --accent: #c9a87c;
+  --accent-h: #e0c49a;
+  --btn-text: #0f0e0d;
+  --border: rgba(201,168,124,0.2);
+  --shadow: 0 12px 40px rgba(0,0,0,0.45);
+  --radius: 12px;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: Inter, system-ui, sans-serif;
+  --ease: 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+img{max-width:100%;display:block}
+.hidden{display:none!important}
+
+#app{min-height:100vh}
+.view{display:none;min-height:100vh}
+.view.on{display:block}
+
+/* TOOLBAR */
+.toolbar{
+  position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);
+  z-index:900;display:flex;gap:0.4rem;align-items:center;
+  background:rgba(26,24,22,0.92);backdrop-filter:blur(16px);
+  border:1px solid var(--border);border-radius:100px;
+  padding:0.4rem 0.5rem;box-shadow:var(--shadow);
+}
+.toolbar button{
+  padding:0.55rem 1.1rem;border-radius:100px;font-size:0.8rem;
+  letter-spacing:0.04em;color:var(--muted);transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:0.35rem;white-space:nowrap;
+}
+.toolbar button:hover{color:var(--text);background:rgba(255,255,255,0.06)}
+.toolbar button.primary{background:var(--accent);color:var(--btn-text)}
+.toolbar button.primary:hover{background:var(--accent-h)}
+.toolbar button.active{background:rgba(201,168,124,0.15);color:var(--accent)}
+.toolbar button:disabled{opacity:0.35;pointer-events:none}
+.toolbar .sep{width:1px;height:1.2rem;background:var(--border);margin:0 0.15rem}
+.toolbar-hint{
+  position:fixed;bottom:4.5rem;left:50%;transform:translateX(-50%);
+  z-index:899;background:rgba(26,24,22,0.95);border:1px solid var(--border);
+  border-radius:8px;padding:0.6rem 1rem;font-size:0.8rem;color:var(--muted);
+  max-width:90vw;text-align:center;pointer-events:none;
+  opacity:0;transition:opacity 0.3s;
+}
+.toolbar-hint.show{opacity:1}
+
+/* EDIT MODE */
+body.editing [data-edit]{
+  outline:1.5px dashed rgba(201,168,124,0.45);outline-offset:4px;
+  cursor:text;border-radius:4px;transition:outline-color 0.2s;
+  min-width:2rem;min-height:1.2em;
+}
+body.editing [data-edit]:hover{outline-color:var(--accent)}
+body.editing [data-edit]:focus{
+  outline:2px solid var(--accent);background:rgba(201,168,124,0.08);
+}
+
+.inline-editor{
+  position:fixed;z-index:950;background:var(--elevated);border:1px solid var(--accent);
+  border-radius:8px;padding:0.75rem;box-shadow:var(--shadow);min-width:280px;max-width:90vw;
+}
+.inline-editor label{display:block;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.4rem}
+.inline-editor input,.inline-editor textarea{
+  width:100%;padding:0.55rem 0.7rem;background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-family:inherit;font-size:0.95rem;
+}
+.inline-editor input:focus,.inline-editor textarea:focus{outline:none;border-color:var(--accent)}
+.inline-editor textarea{min-height:90px;resize:vertical;line-height:1.5}
+.inline-editor .actions{display:flex;gap:0.4rem;margin-top:0.6rem;justify-content:flex-end}
+.inline-editor .actions button{padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem}
+.inline-editor .actions .ok{background:var(--accent);color:var(--btn-text)}
+.inline-editor .actions .cancel{color:var(--muted)}
+
+/* COVER */
+#view-cover{
+  display:none;align-items:center;justify-content:center;
+  min-height:100vh;position:relative;text-align:center;padding:2rem;
+}
+#view-cover.on{display:flex}
+.cover-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(0.4)}
+.cover-fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,14,13,0.25) 0%,rgba(15,14,13,0.85) 100%)}
+.cover-inner{position:relative;z-index:2;max-width:640px}
+.cover-inner h1{
+  font-family:var(--font-display);font-size:clamp(2.6rem,7vw,4.2rem);
+  font-weight:400;letter-spacing:0.03em;line-height:1.1;margin-bottom:0.5rem;
+}
+.cover-inner .sub{
+  font-size:0.9rem;letter-spacing:0.25em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:1.5rem;
+}
+.cover-inner .intro{
+  font-family:var(--font-display);font-size:1.2rem;font-style:italic;
+  color:var(--muted);margin-bottom:0.75rem;
+}
+.cover-inner .desc{font-size:0.95rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.7}
+.cover-inner .welcome{font-family:var(--font-display);font-size:1.05rem;margin-bottom:2rem;opacity:0.85}
+.btn-main{
+  display:inline-flex;align-items:center;gap:0.6rem;
+  padding:0.95rem 2.4rem;background:var(--accent);color:var(--btn-text);
+  font-size:0.85rem;letter-spacing:0.18em;text-transform:uppercase;
+  border-radius:8px;transition:all var(--ease);box-shadow:0 4px 20px rgba(0,0,0,0.3);
+}
+.btn-main:hover{background:var(--accent-h);transform:translateY(-2px)}
+
+/* GUIDE */
+.guide{
+  position:fixed;top:0;left:0;right:0;z-index:800;
+  background:linear-gradient(90deg,#2a2218,#1a1816);
+  border-bottom:1px solid var(--border);
+  padding:0.85rem 1.25rem;display:flex;align-items:center;justify-content:center;gap:1rem;
+  font-size:0.85rem;color:var(--muted);
+}
+.guide strong{color:var(--accent);font-weight:500}
+.guide .close{margin-left:auto;opacity:0.6;padding:0.2rem 0.5rem}
+.guide .close:hover{opacity:1}
+
+/* OVERVIEW */
+#view-overview{padding-bottom:6rem}
+.topbar{
+  position:sticky;top:0;z-index:50;display:flex;justify-content:space-between;align-items:center;
+  padding:0.7rem 1.25rem;background:rgba(15,14,13,0.8);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.topbar button{
+  display:inline-flex;align-items:center;gap:0.35rem;padding:0.4rem 0.8rem;
+  font-size:0.8rem;color:var(--muted);border-radius:6px;transition:all 0.2s;
+}
+.topbar button:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+
+.hero{position:relative;height:36vh;min-height:220px;max-height:400px;overflow:hidden}
+.hero img{width:100%;height:100%;object-fit:cover;filter:brightness(0.65)}
+.hero-fade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg) 100%)}
+.hero-text{position:absolute;bottom:0;left:0;right:0;padding:1.5rem;text-align:center}
+.hero-text h1{font-family:var(--font-display);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:400}
+.hero-text p{font-size:0.8rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);margin-top:0.25rem}
+
+.floors{display:flex;justify-content:center;align-items:center;gap:0.4rem;padding:1.25rem 1rem 0.5rem;flex-wrap:wrap}
+.floors button,.floors .floor-chip{
+  padding:0.5rem 1.2rem;font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);border:1px solid transparent;border-radius:6px;transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:0.35rem;
+}
+.floors button:hover,.floors .floor-chip:hover{color:var(--text);border-color:var(--border)}
+.floors button.on,.floors .floor-chip.on{color:var(--accent);border-color:var(--accent);background:rgba(201,168,124,0.08)}
+.floors .floor-chip .rm{
+  opacity:0;font-size:0.85rem;color:#e07070;padding:0 0.15rem;margin-left:0.15rem;
+  transition:opacity 0.15s;
+}
+body.editing .floors .floor-chip .rm{opacity:0.5}
+body.editing .floors .floor-chip .rm:hover{opacity:1}
+.floors .btn-add-floor{
+  border:1px dashed var(--border)!important;color:var(--accent)!important;
+}
+.floors .btn-add-floor:hover{border-color:var(--accent)!important}
+
+.floor-desc{text-align:center;padding:0.5rem 1.5rem 1.25rem;max-width:560px;margin:0 auto}
+.floor-desc h2{font-family:var(--font-display);font-size:1.4rem;font-weight:400;margin-bottom:0.3rem}
+.floor-desc p{font-size:0.9rem;color:var(--muted)}
+
+.rooms{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:1.1rem;padding:0 1.25rem;max-width:1200px;margin:0 auto;
+}
+.room-card{
+  position:relative;border-radius:var(--radius);overflow:hidden;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);aspect-ratio:4/3;
+  transition:all var(--ease);
+}
+.room-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--accent)}
+.room-card img{width:100%;height:100%;object-fit:cover;transition:transform 0.6s}
+.room-card:hover img{transform:scale(1.05)}
+.room-card .ph{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  background:var(--elevated);color:var(--muted);font-size:0.8rem;letter-spacing:0.08em;
+}
+.room-card .info{
+  position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(15,14,13,0.88) 100%);
+  display:flex;flex-direction:column;justify-content:flex-end;padding:1.1rem;
+}
+.room-card .info h3{font-family:var(--font-display);font-size:1.25rem;font-weight:400}
+.room-card .info span{font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-top:0.15rem}
+.room-card .rm-room{
+  position:absolute;top:0.5rem;right:0.5rem;z-index:5;
+  width:28px;height:28px;border-radius:50%;background:rgba(15,14,13,0.75);
+  color:#e07070;font-size:0.85rem;display:none;align-items:center;justify-content:center;
+  border:1px solid rgba(224,112,112,0.3);opacity:0.7;transition:opacity 0.15s;
+}
+body.editing .room-card .rm-room{display:flex}
+.room-card .rm-room:hover{opacity:1;background:rgba(224,112,112,0.2)}
+
+.manage-bar{
+  display:none;justify-content:center;gap:0.5rem;padding:0.5rem 1rem 1.25rem;flex-wrap:wrap;
+}
+body.editing .manage-bar{display:flex}
+.manage-bar button{
+  padding:0.45rem 1rem;font-size:0.78rem;letter-spacing:0.06em;
+  border:1px dashed var(--border);border-radius:6px;color:var(--accent);transition:all 0.2s;
+}
+.manage-bar button:hover{border-color:var(--accent);background:rgba(201,168,124,0.06)}
+.manage-bar button.danger{color:#e07070;border-color:rgba(224,112,112,0.3)}
+.manage-bar button.danger:hover{background:rgba(224,112,112,0.08);border-color:#e07070}
+
+.empty-msg{text-align:center;padding:3rem 1.5rem;color:var(--muted);font-size:0.9rem;grid-column:1/-1}
+.empty-msg button{color:var(--accent);text-decoration:underline;margin-top:0.5rem;display:inline-block}
+
+/* Manage bar (edit mode) */
+.manage-bar{
+  display:none;justify-content:center;gap:0.5rem;flex-wrap:wrap;
+  padding:0.75rem 1rem 0;max-width:1200px;margin:0 auto;
+}
+body.editing .manage-bar{display:flex}
+.manage-bar button{
+  padding:0.45rem 1rem;font-size:0.78rem;letter-spacing:0.04em;
+  border:1px dashed var(--border);border-radius:8px;color:var(--accent);
+  transition:all 0.2s;
+}
+.manage-bar button:hover{border-color:var(--accent);background:rgba(201,168,124,0.08)}
+.manage-bar button.danger{color:#e07070;border-color:rgba(224,112,112,0.35)}
+.manage-bar button.danger:hover{background:rgba(224,112,112,0.1)}
+
+.room-card{position:relative}
+.room-card .del-room{
+  display:none;position:absolute;top:0.5rem;right:0.5rem;z-index:10;
+  width:28px;height:28px;border-radius:50%;background:rgba(15,14,13,0.75);
+  color:#e07070;font-size:0.85rem;align-items:center;justify-content:center;
+  border:1px solid rgba(224,112,112,0.4);
+}
+body.editing .room-card .del-room{display:flex}
+.room-card .del-room:hover{background:rgba(224,112,112,0.25)}
+
+.floors-wrap{display:flex;justify-content:center;align-items:center;gap:0.4rem;flex-wrap:wrap;padding:1.25rem 1rem 0.5rem}
+body.editing .floors-wrap{padding-bottom:0.25rem}
+
+/* ROOM */
+#view-room{padding-bottom:6rem}
+.room-body{max-width:1100px;margin:0 auto;padding:0 1.25rem}
+.gallery{
+  position:relative;margin:1.25rem 0;border-radius:16px;overflow:hidden;
+  background:var(--surface);aspect-ratio:16/10;
+}
+.gallery img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.gallery .ph{
+  width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0.75rem;background:var(--elevated);color:var(--muted);font-size:0.85rem;
+}
+.gallery .ph button{
+  padding:0.5rem 1.2rem;border:1px dashed var(--border);border-radius:6px;
+  color:var(--accent);font-size:0.8rem;margin-top:0.25rem;
+}
+.gallery .ph button:hover{border-color:var(--accent)}
+.gal-nav{
+  position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;
+  border-radius:50%;background:rgba(15,14,13,0.65);backdrop-filter:blur(6px);
+  color:var(--text);font-size:1.15rem;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);z-index:5;
+}
+.gal-nav:hover{background:rgba(201,168,124,0.25);border-color:var(--accent)}
+.gal-nav.prev{left:0.75rem}.gal-nav.next{right:0.75rem}
+.gal-count{
+  position:absolute;bottom:0.75rem;right:0.75rem;background:rgba(15,14,13,0.7);
+  padding:0.25rem 0.65rem;border-radius:6px;font-size:0.72rem;color:var(--muted);z-index:5;
+}
+.thumbs{display:flex;gap:0.4rem;margin-top:0.6rem;overflow-x:auto;padding-bottom:0.4rem}
+.thumbs button{
+  flex:0 0 68px;height:50px;border-radius:6px;overflow:hidden;border:2px solid transparent;opacity:0.55;
+}
+.thumbs button.on{border-color:var(--accent);opacity:1}
+.thumbs button img{width:100%;height:100%;object-fit:cover}
+
+.room-info{margin-top:1.75rem}
+.room-info h1{font-family:var(--font-display);font-size:clamp(1.7rem,4vw,2.3rem);font-weight:400;margin-bottom:0.3rem}
+.room-info .fn{font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.room-info .desc{font-size:0.95rem;color:var(--muted);line-height:1.75;max-width:680px;margin-bottom:1.5rem}
+
+.meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;margin-bottom:1.5rem}
+.meta-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.9rem 1.1rem}
+.meta-item .lbl{font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin-bottom:0.25rem}
+.meta-item .val{font-size:0.9rem}
+
+.details{display:grid;gap:0.4rem;margin-top:1.5rem}
+.detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.detail-head{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:0.9rem 1.1rem;text-align:left;font-family:var(--font-display);font-size:1.05rem;
+}
+.detail-head:hover{background:rgba(201,168,124,0.04)}
+.detail-head .plus{color:var(--accent);font-size:1.1rem;transition:transform 0.25s}
+.detail.open .detail-head .plus{transform:rotate(45deg)}
+.detail-body{max-height:0;overflow:hidden;transition:max-height 0.35s ease,padding 0.35s}
+.detail.open .detail-body{max-height:400px;padding:0 1.1rem 1.1rem}
+.detail-body p{font-size:0.9rem;color:var(--muted);line-height:1.7}
+
+/* LIGHTBOX */
+.lb{
+  position:fixed;inset:0;z-index:1000;background:rgba(10,9,8,0.95);
+  display:none;align-items:center;justify-content:center;
+}
+.lb.on{display:flex}
+.lb img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:6px}
+.lb .x{
+  position:absolute;top:1.1rem;right:1.1rem;width:42px;height:42px;border-radius:50%;
+  background:rgba(255,255,255,0.08);font-size:1.3rem;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);
+}
+.lb .nav{
+  position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;
+  background:rgba(255,255,255,0.08);font-size:1.25rem;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);
+}
+.lb .nav.prev{left:1rem}.lb .nav.next{right:1rem}
+
+/* MODAL */
+.modal-bg{
+  position:fixed;inset:0;z-index:960;background:rgba(10,9,8,0.8);
+  display:none;align-items:center;justify-content:center;padding:1.25rem;
+}
+.modal-bg.on{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  max-width:440px;width:100%;padding:1.75rem;box-shadow:var(--shadow);
+}
+.modal h2{font-family:var(--font-display);font-size:1.4rem;margin-bottom:1rem}
+.modal label{display:block;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;margin-top:0.75rem}
+.modal input,.modal textarea{
+  width:100%;padding:0.55rem 0.7rem;background:var(--bg);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-family:inherit;font-size:0.9rem;
+}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:var(--accent)}
+.modal textarea{min-height:80px;resize:vertical}
+.modal .row{display:flex;gap:0.5rem;margin-top:1.25rem;justify-content:flex-end}
+.modal .row button{padding:0.5rem 1.1rem;border-radius:6px;font-size:0.85rem}
+.modal .row .ok{background:var(--accent);color:var(--btn-text)}
+.modal .row .cancel{color:var(--muted)}
+
+@media(max-width:700px){
+  .rooms{grid-template-columns:1fr;padding:0 1rem}
+  .gallery{aspect-ratio:4/3;border-radius:var(--radius)}
+  .toolbar{bottom:0.75rem;padding:0.3rem 0.4rem}
+  .toolbar button{padding:0.45rem 0.75rem;font-size:0.75rem}
+  .hero{height:28vh;min-height:180px}
+  .guide{flex-wrap:wrap;text-align:center;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="guide" id="guide">
+  <span>Pulsa <strong>Editar</strong> abajo para personalizar textos e imágenes. Todo se guarda en tu navegador.</span>
+  <button type="button" class="close" id="guideClose" aria-label="Cerrar">✕</button>
+</div>
+
+<div id="app">
+
+  <section class="view on" id="view-cover">
+    <div class="cover-bg" id="coverBg"></div>
+    <div class="cover-fade"></div>
+    <div class="cover-inner">
+      <h1 data-edit="general.name" data-label="Nombre de la casa">Nombre de la casa</h1>
+      <p class="sub" data-edit="general.subtitle" data-label="Subtítulo">Subtítulo</p>
+      <p class="intro" data-edit="general.intro" data-label="Frase introductoria">Una frase que invite a entrar</p>
+      <p class="desc" data-edit="general.description" data-label="Descripción">Describe la casa en unas líneas.</p>
+      <p class="welcome" data-edit="general.welcomeText" data-label="Bienvenida">Bienvenido</p>
+      <button class="btn-main" id="btnEnter" type="button">
+        <span data-edit="general.enterLabel" data-label="Texto del botón">Explorar</span> →
+      </button>
+    </div>
+  </section>
+
+  <section class="view" id="view-overview">
+    <div class="topbar">
+      <button type="button" id="btnHome">← Inicio</button>
+      <span></span>
+    </div>
+    <div class="hero" id="hero">
+      <img id="heroImg" alt="" class="hidden">
+      <div class="hero-fade"></div>
+      <div class="hero-text">
+        <h1 id="ovTitle">—</h1>
+        <p id="ovSub">—</p>
+      </div>
+    </div>
+    <nav class="floors" id="floorsNav"></nav>
+    <div class="floor-desc" id="floorDesc">
+      <h2 id="floorName"></h2>
+      <p id="floorText"></p>
+    </div>
+    <div class="manage-bar" id="manageBar">
+      <button type="button" id="btnAddRoom">+ Habitación</button>
+      <button type="button" id="btnAddFloor">+ Piso</button>
+      <button type="button" id="btnDelFloor" class="danger">Eliminar piso actual</button>
+    </div>
+    <div class="rooms" id="roomsGrid"></div>
+  </section>
+
+  <section class="view" id="view-room">
+    <div class="topbar">
+      <button type="button" id="btnBack">← Volver</button>
+      <div style="display:flex;gap:0.3rem">
+        <button type="button" id="btnPrev">‹ Anterior</button>
+        <button type="button" id="btnNext">Siguiente ›</button>
+      </div>
+    </div>
+    <div class="room-body">
+      <div class="gallery" id="gallery">
+        <img id="galImg" alt="" class="hidden">
+        <div class="ph" id="galPh">
+          <span>Sin fotografía</span>
+          <button type="button" id="btnAddPhoto">+ Añadir foto (URL)</button>
+        </div>
+        <button class="gal-nav prev hidden" id="galPrev" type="button">‹</button>
+        <button class="gal-nav next hidden" id="galNext" type="button">›</button>
+        <span class="gal-count hidden" id="galCount"></span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="room-info">
+        <h1 id="rName"></h1>
+        <p class="fn" id="rFn"></p>
+        <p class="desc" id="rDesc"></p>
+        <div class="meta" id="rMeta"></div>
+        <div class="details" id="rDetails"></div>
+        <button type="button" id="btnAddDetail" class="hidden" style="margin-top:1rem;padding:0.5rem 1rem;border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:0.8rem;width:100%">
+          + Añadir detalle (iluminación, historia, sonidos…)
+        </button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="toolbar" id="toolbar">
+  <button type="button" id="tbEdit">✎ Editar</button>
+  <span class="sep" id="tbSep" style="display:none"></span>
+  <button type="button" id="tbUndo" style="display:none" disabled>↩ Deshacer</button>
+  <button type="button" id="tbSave" class="primary" style="display:none">Guardar</button>
+  <button type="button" id="tbDone" style="display:none">Listo</button>
+</div>
+<div class="toolbar-hint" id="tbHint">Haz clic en cualquier texto para cambiarlo</div>
+
+<div class="lb" id="lb">
+  <button class="x" id="lbClose" type="button">×</button>
+  <button class="nav prev" id="lbPrev" type="button">‹</button>
+  <img id="lbImg" alt="">
+  <button class="nav next" id="lbNext" type="button">›</button>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modal">
+    <h2 id="modalTitle">Añadir</h2>
+    <div id="modalFields"></div>
+    <div class="row">
+      <button type="button" class="cancel" id="modalCancel">Cancelar</button>
+      <button type="button" class="ok" id="modalOk">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<div class="inline-editor hidden" id="inlineEd">
+  <label id="ieLabel"></label>
+  <input type="text" id="ieInput" class="hidden">
+  <textarea id="ieArea" class="hidden"></textarea>
+  <div class="actions">
+    <button type="button" class="cancel" id="ieCancel">Cancelar</button>
+    <button type="button" class="ok" id="ieOk">Aplicar</button>
+  </div>
+</div>
+
+<script>
+const DEFAULT = {
+  general: {
+    name: "Nombre de la casa",
+    subtitle: "Subtítulo",
+    intro: "Una frase que invite a entrar",
+    description: "Describe la casa en unas líneas.",
+    welcomeText: "Bienvenido",
+    enterLabel: "Explorar",
+    coverImage: "",
+    backgroundImage: ""
+  },
+  floors: [
+    {
+      id: "p1", name: "Planta baja", description: "Descripción de este piso", image: "",
+      rooms: [
+        { id: "r1", name: "Sala", function: "Estar", description: "Describe esta habitación.", style: "", atmosphere: "", images: [], details: [] },
+        { id: "r2", name: "Cocina", function: "Cocinar", description: "Describe esta habitación.", style: "", atmosphere: "", images: [], details: [] }
+      ]
+    },
+    {
+      id: "p2", name: "Primer piso", description: "Descripción de este piso", image: "",
+      rooms: [
+        { id: "r3", name: "Dormitorio", function: "Descansar", description: "Describe esta habitación.", style: "", atmosphere: "", images: [], details: [] }
+      ]
+    }
+  ]
+};
+
+const KEY = "la-casa-v2";
+let cfg = null;
+let history = [];
+const st = { view: "cover", floor: 0, roomId: null, img: 0, editing: false };
+
+const $ = (s, c=document) => c.querySelector(s);
+const $$ = (s, c=document) => [...c.querySelectorAll(s)];
+const clone = o => JSON.parse(JSON.stringify(o));
+const uid = () => Math.random().toString(36).slice(2,9);
+
+function load() {
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) return Object.assign(clone(DEFAULT), JSON.parse(s));
+  } catch(e){}
+  return clone(DEFAULT);
+}
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(cfg));
+  showHint("Guardado ✓");
+}
+function pushHist() {
+  history.push(clone(cfg));
+  if (history.length > 25) history.shift();
+  $("#tbUndo").disabled = false;
+}
+function undo() {
+  if (!history.length) return;
+  cfg = history.pop();
+  $("#tbUndo").disabled = !history.length;
+  renderAll();
+  showHint("Cambio deshecho");
+}
+function getPath(path) {
+  return path.split(".").reduce((o,k) => o?.[k], cfg);
+}
+function setPath(path, val) {
+  const keys = path.split(".");
+  let o = cfg;
+  for (let i=0; i<keys.length-1; i++) o = o[keys[i]];
+  o[keys[keys.length-1]] = val;
+}
+function findRoom(id) {
+  for (const f of cfg.floors) {
+    const r = f.rooms.find(x => x.id === id);
+    if (r) return r;
+  }
+  return null;
+}
+function allRooms() {
+  return cfg.floors.flatMap(f => f.rooms);
+}
+
+function show(id) {
+  $$(".view").forEach(v => v.classList.remove("on"));
+  const el = $("#view-" + id);
+  if (el) el.classList.add("on");
+  st.view = id;
+  window.scrollTo(0,0);
+}
+
+function renderAll() {
+  renderCover();
+  if (st.view === "overview" || st.view === "cover") renderOverview();
+  if (st.view === "room" && st.roomId) renderRoom();
+}
+
+function renderCover() {
+  const g = cfg.general;
+  const set = (sel, val) => { const e = $(sel); if (e) e.textContent = val || ""; };
+  set('[data-edit="general.name"]', g.name);
+  set('[data-edit="general.subtitle"]', g.subtitle);
+  set('[data-edit="general.intro"]', g.intro);
+  set('[data-edit="general.description"]', g.description);
+  set('[data-edit="general.welcomeText"]', g.welcomeText);
+  set('[data-edit="general.enterLabel"]', g.enterLabel);
+  const bg = g.coverImage || g.backgroundImage;
+  if (bg) {
+    $("#coverBg").style.backgroundImage = `url("${bg}")`;
+  } else {
+    $("#coverBg").style.backgroundImage = "none";
+    $("#coverBg").style.background = "linear-gradient(160deg,#1a1816,#0f0e0d 50%,#1c1814)";
+  }
+}
+
+function renderOverview() {
+  const g = cfg.general;
+  const floor = cfg.floors[st.floor] || cfg.floors[0];
+  $("#ovTitle").textContent = g.name || "";
+  $("#ovSub").textContent = g.subtitle || "";
+  const heroImg = $("#heroImg");
+  const src = floor?.image || g.backgroundImage || g.coverImage;
+  if (src) { heroImg.src = src; heroImg.classList.remove("hidden"); }
+  else heroImg.classList.add("hidden");
+
+  const nav = $("#floorsNav");
+  nav.innerHTML = "";
+  cfg.floors.forEach((f,i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "floor-chip" + (i === st.floor ? " on" : "");
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = f.name || `Piso ${i+1}`;
+    // allow renaming by clicking name when editing and this floor is active
+    if (st.editing && i === st.floor) {
+      nameSpan.setAttribute("data-edit", `floors.${i}.name`);
+      nameSpan.setAttribute("data-label", "Nombre del piso");
+    }
+    b.appendChild(nameSpan);
+    if (st.editing && cfg.floors.length > 1) {
+      const rm = document.createElement("span");
+      rm.className = "rm";
+      rm.textContent = "×";
+      rm.title = "Eliminar piso";
+      rm.onclick = (e) => { e.stopPropagation(); removeFloor(i); };
+      b.appendChild(rm);
+    }
+    b.onclick = (e) => {
+      if (e.target.classList.contains("rm")) return;
+      if (st.editing && e.target.hasAttribute("data-edit")) return;
+      st.floor = i;
+      renderOverview();
+    };
+    nav.appendChild(b);
+  });
+  if (st.editing) {
+    const addF = document.createElement("button");
+    addF.type = "button";
+    addF.className = "btn-add-floor";
+    addF.textContent = "+ Piso";
+    addF.onclick = addFloor;
+    nav.appendChild(addF);
+  }
+
+  if (floor) {
+    const fn = $("#floorName"), ft = $("#floorText");
+    fn.textContent = floor.name || "";
+    ft.textContent = floor.description || "";
+    fn.setAttribute("data-edit", `floors.${st.floor}.name`);
+    fn.setAttribute("data-label", "Nombre del piso");
+    ft.setAttribute("data-edit", `floors.${st.floor}.description`);
+    ft.setAttribute("data-label", "Descripción del piso");
+  }
+
+  // manage bar visibility handled by CSS body.editing
+  const delFloorBtn = $("#btnDelFloor");
+  if (delFloorBtn) delFloorBtn.style.display = cfg.floors.length > 1 ? "" : "none";
+
+  const grid = $("#roomsGrid");
+  grid.innerHTML = "";
+  if (!floor?.rooms?.length) {
+    grid.innerHTML = `<div class="empty-msg">No hay habitaciones en este piso.<br><button type="button" id="emptyAddRoom">+ Añadir habitación</button></div>`;
+    $("#emptyAddRoom")?.addEventListener("click", addRoom);
+    return;
+  }
+  floor.rooms.forEach((room, ri) => {
+    const card = document.createElement("article");
+    card.className = "room-card";
+    card.tabIndex = 0;
+    const imgSrc = room.images?.[0]?.src;
+    const rmBtn = `<button type="button" class="rm-room" title="Eliminar habitación" data-ri="${ri}">×</button>`;
+    if (imgSrc) {
+      card.innerHTML = `${rmBtn}<img src="${imgSrc}" alt="${room.name||""}" loading="lazy"><div class="info"><h3>${room.name||""}</h3>${room.function?`<span>${room.function}</span>`:""}</div>`;
+    } else {
+      card.innerHTML = `${rmBtn}<div class="ph">Sin foto</div><div class="info"><h3>${room.name||""}</h3>${room.function?`<span>${room.function}</span>`:""}</div>`;
+    }
+    card.querySelector(".rm-room")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeRoom(ri);
+    });
+    card.onclick = (e) => {
+      if (e.target.closest(".rm-room")) return;
+      openRoom(room.id);
+    };
+    card.onkeydown = e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); openRoom(room.id); } };
+    grid.appendChild(card);
+  });
+}
+
+function openRoom(id) {
+  st.roomId = id;
+  st.img = 0;
+  renderRoom();
+  show("room");
+}
+
+function pathOfRoom(room, field) {
+  for (let fi=0; fi<cfg.floors.length; fi++) {
+    const ri = cfg.floors[fi].rooms.findIndex(r => r.id === room.id);
+    if (ri >= 0) return `floors.${fi}.rooms.${ri}.${field}`;
+  }
+  return "";
+}
+
+function renderRoom() {
+  const room = findRoom(st.roomId);
+  if (!room) return;
+
+  const rn = $("#rName"), rf = $("#rFn"), rd = $("#rDesc");
+  rn.textContent = room.name || "";
+  rf.textContent = room.function || "";
+  rd.textContent = room.description || "";
+  rn.setAttribute("data-edit", pathOfRoom(room,"name"));
+  rn.setAttribute("data-label", "Nombre");
+  rf.setAttribute("data-edit", pathOfRoom(room,"function"));
+  rf.setAttribute("data-label", "Función");
+  rd.setAttribute("data-edit", pathOfRoom(room,"description"));
+  rd.setAttribute("data-label", "Descripción");
+  rf.style.display = room.function || st.editing ? "" : "none";
+  rd.style.display = room.description || st.editing ? "" : "none";
+
+  const meta = $("#rMeta");
+  meta.innerHTML = "";
+  [["style","Estilo"],["atmosphere","Atmósfera"]].forEach(([k,label]) => {
+    if (room[k] || st.editing) {
+      const d = document.createElement("div");
+      d.className = "meta-item";
+      d.innerHTML = `<p class="lbl">${label}</p><p class="val" data-edit="${pathOfRoom(room,k)}" data-label="${label}">${room[k]||(st.editing?"—":"")}</p>`;
+      meta.appendChild(d);
+    }
+  });
+
+  const det = $("#rDetails");
+  det.innerHTML = "";
+  (room.details||[]).forEach((d,i) => {
+    const el = document.createElement("div");
+    el.className = "detail";
+    el.innerHTML = `
+      <button type="button" class="detail-head">
+        <span data-edit="${pathOfRoom(room,"details."+i+".title")}" data-label="Título del detalle">${d.title||"Detalle"}</span>
+        <span class="plus">+</span>
+      </button>
+      <div class="detail-body"><p data-edit="${pathOfRoom(room,"details."+i+".content")}" data-label="Contenido">${d.content||""}</p></div>`;
+    el.querySelector(".detail-head").onclick = (e) => {
+      if (st.editing && e.target.closest("[data-edit]")) return;
+      el.classList.toggle("open");
+    };
+    det.appendChild(el);
+  });
+
+  $("#btnAddDetail").classList.toggle("hidden", !st.editing);
+  $("#btnAddDetail").onclick = () => addDetail(room);
+  renderGallery(room);
+
+  const all = allRooms();
+  const idx = all.findIndex(r => r.id === st.roomId);
+  $("#btnPrev").disabled = idx <= 0;
+  $("#btnNext").disabled = idx >= all.length-1;
+  $("#btnPrev").style.opacity = idx <= 0 ? "0.35" : "1";
+  $("#btnNext").style.opacity = idx >= all.length-1 ? "0.35" : "1";
+}
+
+function renderGallery(room) {
+  const imgs = room.images || [];
+  const main = $("#galImg"), ph = $("#galPh");
+  const prev = $("#galPrev"), next = $("#galNext"), count = $("#galCount");
+  const thumbs = $("#thumbs");
+  thumbs.innerHTML = "";
+
+  if (!imgs.length || !imgs[0]?.src) {
+    main.classList.add("hidden");
+    ph.classList.remove("hidden");
+    prev.classList.add("hidden");
+    next.classList.add("hidden");
+    count.classList.add("hidden");
+    return;
+  }
+  ph.classList.add("hidden");
+  main.classList.remove("hidden");
+  st.img = Math.max(0, Math.min(st.img, imgs.length-1));
+  main.src = imgs[st.img].src;
+  main.alt = imgs[st.img].alt || room.name || "";
+
+  if (imgs.length > 1) {
+    prev.classList.remove("hidden");
+    next.classList.remove("hidden");
+    count.classList.remove("hidden");
+    count.textContent = `${st.img+1} / ${imgs.length}`;
+  } else {
+    prev.classList.add("hidden");
+    next.classList.add("hidden");
+    count.classList.add("hidden");
+  }
+  imgs.forEach((im,i) => {
+    if (!im.src) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = i===st.img ? "on" : "";
+    b.innerHTML = `<img src="${im.src}" alt="">`;
+    b.onclick = () => { st.img=i; renderGallery(room); };
+    thumbs.appendChild(b);
+  });
+}
+
+function toggleEdit(on) {
+  st.editing = on ?? !st.editing;
+  document.body.classList.toggle("editing", st.editing);
+  $("#tbEdit").classList.toggle("active", st.editing);
+  $("#tbEdit").textContent = st.editing ? "✎ Editando" : "✎ Editar";
+  $("#tbSep").style.display = st.editing ? "" : "none";
+  $("#tbUndo").style.display = st.editing ? "" : "none";
+  $("#tbSave").style.display = st.editing ? "" : "none";
+  $("#tbDone").style.display = st.editing ? "" : "none";
+  if (st.editing) {
+    showHint("Haz clic en un texto para renombrarlo. Usa + Piso / + Habitación para añadir.");
+    $("#guide")?.classList.add("hidden");
+  }
+  if (st.view === "room" && st.roomId) renderRoom();
+  if (st.view === "overview") renderOverview();
+  if (st.view === "cover") renderCover();
+}
+
+function showHint(msg) {
+  const h = $("#tbHint");
+  h.textContent = msg;
+  h.classList.add("show");
+  clearTimeout(h._t);
+  h._t = setTimeout(() => h.classList.remove("show"), 2500);
+}
+
+let ieTarget = null;
+function openInline(el) {
+  const path = el.getAttribute("data-edit");
+  const label = el.getAttribute("data-label") || "Editar";
+  if (!path) return;
+  ieTarget = { el, path };
+  const val = getPath(path) ?? el.textContent;
+  const isLong = (val||"").length > 60 || /description|intro|content|welcome/.test(path);
+
+  $("#ieLabel").textContent = label;
+  const input = $("#ieInput"), area = $("#ieArea");
+  if (isLong) {
+    input.classList.add("hidden");
+    area.classList.remove("hidden");
+    area.value = val || "";
+    setTimeout(() => area.focus(), 50);
+  } else {
+    area.classList.add("hidden");
+    input.classList.remove("hidden");
+    input.value = val || "";
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+  }
+  const ed = $("#inlineEd");
+  ed.classList.remove("hidden");
+  const rect = el.getBoundingClientRect();
+  let top = rect.bottom + 8, left = rect.left;
+  if (top + 180 > window.innerHeight) top = Math.max(8, rect.top - 180);
+  if (left + 300 > window.innerWidth) left = window.innerWidth - 320;
+  if (left < 8) left = 8;
+  ed.style.top = top + "px";
+  ed.style.left = left + "px";
+}
+function applyInline() {
+  if (!ieTarget) return;
+  const isArea = !$("#ieArea").classList.contains("hidden");
+  const val = isArea ? $("#ieArea").value : $("#ieInput").value;
+  pushHist();
+  setPath(ieTarget.path, val);
+  closeInline();
+  renderAll();
+  showHint("Texto actualizado");
+}
+function closeInline() {
+  $("#inlineEd").classList.add("hidden");
+  ieTarget = null;
+}
+
+let modalCb = null;
+function openModal(title, fields, cb) {
+  $("#modalTitle").textContent = title;
+  const box = $("#modalFields");
+  box.innerHTML = "";
+  fields.forEach(f => {
+    const lab = document.createElement("label");
+    lab.textContent = f.label;
+    box.appendChild(lab);
+    const inp = document.createElement(f.area ? "textarea" : "input");
+    if (!f.area) inp.type = "text";
+    inp.id = "mf-" + f.key;
+    inp.value = f.value || "";
+    if (f.placeholder) inp.placeholder = f.placeholder;
+    box.appendChild(inp);
+  });
+  modalCb = cb;
+  $("#modalBg").classList.add("on");
+  setTimeout(() => $("#mf-" + fields[0].key)?.focus(), 80);
+}
+function closeModal() {
+  $("#modalBg").classList.remove("on");
+  modalCb = null;
+}
+
+function addRoom() {
+  openModal("Nueva habitación", [
+    { key: "name", label: "Nombre", placeholder: "Ej: Sala de estar" },
+    { key: "function", label: "Función", placeholder: "Ej: Recepción" },
+    { key: "description", label: "Descripción", area: true }
+  ], (data) => {
+    pushHist();
+    const floor = cfg.floors[st.floor];
+    if (!floor.rooms) floor.rooms = [];
+    floor.rooms.push({
+      id: "r"+uid(), name: data.name || "Nueva habitación",
+      function: data.function || "", description: data.description || "",
+      style: "", atmosphere: "", images: [], details: []
+    });
+    renderOverview();
+    showHint("Habitación añadida");
+  });
+}
+function removeRoom(ri) {
+  const floor = cfg.floors[st.floor];
+  if (!floor?.rooms?.[ri]) return;
+  const name = floor.rooms[ri].name || "esta habitación";
+  if (!confirm(`¿Eliminar «${name}»?`)) return;
+  pushHist();
+  const removedId = floor.rooms[ri].id;
+  floor.rooms.splice(ri, 1);
+  if (st.roomId === removedId) {
+    st.roomId = null;
+    show("overview");
+  }
+  renderOverview();
+  showHint("Habitación eliminada");
+}
+function addFloor() {
+  openModal("Nuevo piso", [
+    { key: "name", label: "Nombre del piso", placeholder: "Ej: Segundo piso, Sótano…" },
+    { key: "description", label: "Descripción (opcional)", area: true }
+  ], (data) => {
+    pushHist();
+    cfg.floors.push({
+      id: "p"+uid(),
+      name: data.name || "Nuevo piso",
+      description: data.description || "",
+      image: "",
+      rooms: []
+    });
+    st.floor = cfg.floors.length - 1;
+    renderOverview();
+    showHint("Piso añadido");
+  });
+}
+function removeFloor(index) {
+  if (cfg.floors.length <= 1) {
+    showHint("Debe quedar al menos un piso");
+    return;
+  }
+  const name = cfg.floors[index]?.name || "este piso";
+  if (!confirm(`¿Eliminar «${name}» y todas sus habitaciones?`)) return;
+  pushHist();
+  cfg.floors.splice(index, 1);
+  if (st.floor >= cfg.floors.length) st.floor = cfg.floors.length - 1;
+  if (st.floor < 0) st.floor = 0;
+  st.roomId = null;
+  renderOverview();
+  showHint("Piso eliminado");
+}
+function addDetail(room) {
+  openModal("Nuevo detalle", [
+    { key: "title", label: "Título", placeholder: "Ej: Iluminación, Historia…" },
+    { key: "content", label: "Contenido", area: true }
+  ], (data) => {
+    pushHist();
+    if (!room.details) room.details = [];
+    room.details.push({ title: data.title || "Detalle", content: data.content || "" });
+    renderRoom();
+    showHint("Detalle añadido");
+  });
+}
+function addPhoto() {
+  const room = findRoom(st.roomId);
+  if (!room) return;
+  openModal("Añadir fotografía", [
+    { key: "url", label: "URL de la imagen", placeholder: "https://..." },
+    { key: "title", label: "Título (opcional)" }
+  ], (data) => {
+    if (!data.url) return;
+    pushHist();
+    if (!room.images) room.images = [];
+    room.images.push({ src: data.url, title: data.title || "", alt: data.title || room.name || "" });
+    st.img = room.images.length - 1;
+    renderRoom();
+    showHint("Foto añadida");
+  });
+}
+
+function bind() {
+  $("#btnEnter").onclick = () => { renderOverview(); show("overview"); };
+  $("#btnHome").onclick = () => show("cover");
+  $("#btnBack").onclick = () => { st.roomId=null; renderOverview(); show("overview"); };
+  $("#btnPrev").onclick = () => {
+    const all=allRooms(); const i=all.findIndex(r=>r.id===st.roomId);
+    if (i>0) openRoom(all[i-1].id);
+  };
+  $("#btnNext").onclick = () => {
+    const all=allRooms(); const i=all.findIndex(r=>r.id===st.roomId);
+    if (i<all.length-1) openRoom(all[i+1].id);
+  };
+  $("#galPrev").onclick = () => {
+    const room=findRoom(st.roomId); if(!room?.images?.length) return;
+    st.img = (st.img - 1 + room.images.length) % room.images.length;
+    renderGallery(room);
+  };
+  $("#galNext").onclick = () => {
+    const room=findRoom(st.roomId); if(!room?.images?.length) return;
+    st.img = (st.img + 1) % room.images.length;
+    renderGallery(room);
+  };
+  $("#galImg").onclick = () => {
+    const room=findRoom(st.roomId);
+    if (!room?.images?.length) return;
+    $("#lbImg").src = room.images[st.img].src;
+    $("#lb").classList.add("on");
+  };
+  $("#btnAddPhoto").onclick = addPhoto;
+  $("#lbClose").onclick = () => $("#lb").classList.remove("on");
+  $("#lb").onclick = e => { if (e.target===$("#lb")) $("#lb").classList.remove("on"); };
+  $("#lbPrev").onclick = () => {
+    const room=findRoom(st.roomId); if(!room?.images?.length) return;
+    st.img = (st.img - 1 + room.images.length) % room.images.length;
+    $("#lbImg").src = room.images[st.img].src;
+    renderGallery(room);
+  };
+  $("#lbNext").onclick = () => {
+    const room=findRoom(st.roomId); if(!room?.images?.length) return;
+    st.img = (st.img + 1) % room.images.length;
+    $("#lbImg").src = room.images[st.img].src;
+    renderGallery(room);
+  };
+
+  $("#tbEdit").onclick = () => toggleEdit();
+  $("#tbDone").onclick = () => toggleEdit(false);
+  $("#tbSave").onclick = save;
+  $("#tbUndo").onclick = undo;
+  $("#guideClose").onclick = () => {
+    $("#guide").classList.add("hidden");
+    localStorage.setItem("la-casa-guide-hide","1");
+  };
+  if (localStorage.getItem("la-casa-guide-hide")) $("#guide").classList.add("hidden");
+  $("#btnAddRoom").onclick = addRoom;
+  $("#btnAddFloor").onclick = addFloor;
+  $("#btnDelFloor").onclick = () => removeFloor(st.floor);
+
+  document.addEventListener("click", e => {
+    if (!st.editing) return;
+    const el = e.target.closest("[data-edit]");
+    if (el && el.getAttribute("data-edit")) {
+      e.preventDefault();
+      e.stopPropagation();
+      openInline(el);
+    }
+  });
+  $("#ieOk").onclick = applyInline;
+  $("#ieCancel").onclick = closeInline;
+  $("#ieInput").onkeydown = e => {
+    if (e.key==="Enter") { e.preventDefault(); applyInline(); }
+    if (e.key==="Escape") closeInline();
+  };
+  $("#ieArea").onkeydown = e => {
+    if (e.key==="Escape") closeInline();
+    if (e.key==="Enter" && (e.metaKey||e.ctrlKey)) { e.preventDefault(); applyInline(); }
+  };
+  $("#modalCancel").onclick = closeModal;
+  $("#modalOk").onclick = () => {
+    if (!modalCb) return;
+    const data = {};
+    $$("#modalFields input, #modalFields textarea").forEach(inp => {
+      data[inp.id.replace("mf-","")] = inp.value;
+    });
+    const cb = modalCb;
+    closeModal();
+    cb(data);
+  };
+  $("#modalBg").onclick = e => { if (e.target===$("#modalBg")) closeModal(); };
+
+  document.addEventListener("keydown", e => {
+    if ($("#lb").classList.contains("on")) {
+      if (e.key==="Escape") $("#lb").classList.remove("on");
+      if (e.key==="ArrowLeft") $("#lbPrev").click();
+      if (e.key==="ArrowRight") $("#lbNext").click();
+      return;
+    }
+    if (!$("#inlineEd").classList.contains("hidden")) {
+      if (e.key==="Escape") closeInline();
+      return;
+    }
+    if ($("#modalBg").classList.contains("on")) {
+      if (e.key==="Escape") closeModal();
+      return;
+    }
+    if (st.view==="room") {
+      if (e.key==="Escape") $("#btnBack").click();
+      if (e.key==="ArrowLeft") $("#btnPrev").click();
+      if (e.key==="ArrowRight") $("#btnNext").click();
+    }
+  });
+}
+
+cfg = load();
+bind();
+renderCover();
+</script>
+</body>
+</html>
